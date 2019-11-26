@@ -127,7 +127,7 @@ func rainsLookup(remoteDomain string) (bool, *snet.Addr) {
 		host = remoteDomain
 		port = "52690"
 	}
-	ia, l3, err := scionutil.GetHostByName(host + ".")
+	ia, l3, err := scionutil.GetHostByName(host)
 	if err != nil {
 		return false, nil
 	}
