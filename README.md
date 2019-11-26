@@ -62,11 +62,18 @@ In the router/hosts section of the .yml file, replace the "name" entry with your
 Finally, your hostname specified in the router/hosts section needs to resolve to a valid SCION addres on the specified [RAINS](https://github.com/netsec-ethz/rains) server. SCION address where the RAINS server is running needs to be specified in the config file at ~/go/src/github.com/scionproto/scion/gen/rains.cfg. Simply put the address of the RAINS server together with the port inside this file.
 NOTE: when building jackal, both SCION and IP address mapings from /etc/hosts file will be loaded.
 
-## Connect to jackal
+### Starting jackal
 Once you have the config file setup correctly, together with the MySQL database, valid certificates and the DNS and RAINS entries, you can run your jackal server. 
 ```shell
 ./jackal -c example.jackal.yml
 ```
+## Connecting to jackal
+In order to connect to an XMPP server, you can use an XMPP client, for example [Psi](https://psi-im.org/) (GUI, has in-band registration) or [Profanity](https://profanity-im.github.io/) (console-based, does not support in-band registration). The following are the steps if using PSI:
+1. General->Account Setup->Add
+2. Pick a name, check the "Register new account" box
+3. Add your XMPP server name, e.g. myjackalserver.com (this name should be DNS/RAINS resolvable) - if you are using a self-signed certificate you will need to confirm the server's authenticity by clicking "Trust this certificate"
+4. Provide your desired username and password
+Now you should have a new account registered at your xmpp server. You can set the status of the account to online, and send/receive messages to other xmpp clients.
 
 ## Notes for local testing
 To be used only when playing with jackal.
