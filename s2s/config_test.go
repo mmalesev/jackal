@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scionproto/scion/go/lib/sciond"
+	"github.com/scionproto/scion/go/lib/sock/reliable"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -72,4 +74,53 @@ max_stanza_size: 8192
 	require.Equal(t, time.Duration(300)*time.Second, cfg.DialTimeout)
 	require.Equal(t, time.Duration(250)*time.Second, cfg.ConnectTimeout)
 	require.Equal(t, 8192, cfg.MaxStanzaSize)
+	require.Nil(t, cfg.Scion)
+	rawCfg += `
+scion_transport:
+  addr: "my_scion_address"
+  privkey_path: "key_path"
+  cert_path: "certificate_path"
+`
+	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
+	require.NotNil(t, cfg.Scion)
+}
+
+func TestScionConfig(t *testing.T) {
+	cfg := ScionConfig{}
+	rawCfg := `empty`
+	err := yaml.Unmarshal([]byte(rawCfg), &cfg)
+	require.NotNil(t, err)
+
+	rawCfg = `
+addr: "scion_addr"
+`
+	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
+	require.NotNil(t, err)
+	require.Equal(t, cfg.Address, "scion_addr")
+
+	rawCfg += `
+privkey_path: "key_path"
+cert_path: "c_path"
+`
+	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
+	require.NotNil(t, cfg)
+	require.Equal(t, cfg.Key, "key_path")
+	require.Equal(t, cfg.Cert, "c_path")
+	require.Equal(t, cfg.Port, defaultScionTransportPort)
+	require.Equal(t, cfg.KeepAlive, defaultTransportKeepAlive)
+	require.Equal(t, cfg.Dispatcher, reliable.DefaultDispPath)
+	require.Equal(t, cfg.Sciond, sciond.DefaultSCIONDPath)
+
+	rawCfg += `
+port: 1234
+dispatcher_path: "d_path"
+sciond_path: "s_path"
+keep_alive: 17
+`
+	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
+	require.NotNil(t, cfg)
+	require.Equal(t, cfg.Port, 1234)
+	require.Equal(t, cfg.KeepAlive, 17*time.Second)
+	require.Equal(t, cfg.Dispatcher, "d_path")
+	require.Equal(t, cfg.Sciond, "s_path")
 }

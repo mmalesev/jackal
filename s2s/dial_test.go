@@ -58,3 +58,6 @@ func TestS2SDial(t *testing.T) {
 	require.NotNil(t, out)
 	require.Nil(t, err)
 }
+
+// TODO (mmalesev): Once there is a stable xmpp server deployed (RAINS resolvable), add UTs
+// to dial, in, out, s2s, scionserver, server and quicsocket
