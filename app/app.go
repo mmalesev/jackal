@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	_ "net/http/pprof" // http profile handlers
@@ -70,6 +71,8 @@ type Application struct {
 	debugSrv         *http.Server
 	waitStopCh       chan os.Signal
 	shutDownWaitSecs time.Duration
+	configFile       string
+	logFile          string
 }
 
 // New returns a runnable application given an output and a command line arguments array.
@@ -86,7 +89,6 @@ func (a *Application) Run() error {
 	if len(a.args) == 0 {
 		return errors.New("empty command-line arguments")
 	}
-	var configFile string
 	var showVersion, showUsage bool
 
 	fs := flag.NewFlagSet("jackal", flag.ExitOnError)
@@ -96,8 +98,8 @@ func (a *Application) Run() error {
 	fs.BoolVar(&showUsage, "h", false, "Show this message")
 	fs.BoolVar(&showVersion, "version", false, "Print version information.")
 	fs.BoolVar(&showVersion, "v", false, "Print version information.")
-	fs.StringVar(&configFile, "config", "/etc/jackal/jackal.yml", "Configuration file path.")
-	fs.StringVar(&configFile, "c", "/etc/jackal/jackal.yml", "Configuration file path.")
+	fs.StringVar(&a.configFile, "config", "/etc/jackal/jackal.yml", "Configuration file path.")
+	fs.StringVar(&a.configFile, "c", "/etc/jackal/jackal.yml", "Configuration file path.")
 	fs.Usage = func() {
 		for i := range logoStr {
 			fmt.Fprintf(a.output, "%s\n", logoStr[i])
@@ -118,7 +120,7 @@ func (a *Application) Run() error {
 	}
 	// load configuration
 	var cfg Config
-	err := cfg.FromFile(configFile)
+	err := cfg.FromFile(a.configFile)
 	if err != nil {
 		return err
 	}
@@ -232,6 +234,7 @@ func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
 		if err != nil {
 			return err
 		}
+		a.logFile = config.LogPath
 		logFiles = append(logFiles, f)
 	}
 	l, err := log.New(config.Level, output, logFiles...)
@@ -261,12 +264,25 @@ func (a *Application) printLogo() {
 	log.Infof("jackal %v\n", version.ApplicationVersion)
 }
 
+func (a *Application) debugResponse(w http.ResponseWriter, r *http.Request) {
+	if path := r.URL.Path; path == "/log/" {
+		log, _ := ioutil.ReadFile(a.logFile)
+		fmt.Fprintf(w, string(log))
+	} else if path == "/config/" {
+		config, _ := ioutil.ReadFile(a.configFile)
+		fmt.Fprintf(w, string(config))
+	} else {
+		fmt.Fprintf(w, "404 page not found")
+	}
+}
+
 func (a *Application) initDebugServer(port int) error {
 	a.debugSrv = &http.Server{}
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
+	http.HandleFunc("/", a.debugResponse)
 	go a.debugSrv.Serve(ln)
 	log.Infof("debug server listening at %d...", port)
 	return nil
